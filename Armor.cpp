@@ -146,21 +146,17 @@ int main() {
 				{
 					armor.finalScore = armor.sizeScore + armor.distScore + armor.rotationScore;
 				}
-				//choose the one with highest score, store it on _targetArmor
-	//选择得分最高的那个，将其存储在_targetArmor上
-				std::sort(_armors.begin(), _armors.end(), [](const ArmorDescriptor& a, const ArmorDescriptor& b)
-					{
-						return a.finalScore > b.finalScore;
-					});
-				_armors.erase(remove_if(_armors.begin(), _armors.end(), [_fun](ArmorDescriptor& i)
-					{//lamdba函数判断是不是装甲板，将装甲板中心的图片提取后让识别函数去识别，识别可以用svm或者模板匹配等
-						return 0 == (isArmorPattern(i));
-					}), _armors.end());
+				for (auto& armor : _armors) {
+				//	if (armor.finalScore > 100) {
+						_fun.drawRect(img, armor);
+				//	}
+				}
+
 			}
 		}
 		_armors.clear();
-		lightContours.clear();
-		
+		lightInfos.clear();
+
 		imshow("0000", img);
 		waitKey(1);
 

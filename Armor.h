@@ -15,6 +15,8 @@ const cv::Point2f crossPointOf(const std::array<cv::Point_<ValType>, 2>& line1, 
 
 double TemplateMatch(Mat orginImg, Mat tmpImg, Point& finalLoc, int mode);
 
+
+
 enum ColorChannels
 {
 	BLUE = 0,
@@ -43,6 +45,43 @@ enum ObjectType
 	BIG_ARMOR = 2,
 	MINI_RUNE = 3,
 	GREAT_RUNE = 4
+};
+class LightDescriptor
+{
+public:
+	LightDescriptor() {};
+	LightDescriptor(const cv::RotatedRect& light)
+	{
+		width = light.size.width;
+		length = light.size.height;
+		center = light.center;
+		angle = light.angle;
+		area = light.size.area();
+	}
+	const LightDescriptor& operator =(const LightDescriptor& ld)
+	{
+		this->width = ld.width;
+		this->length = ld.length;
+		this->center = ld.center;
+		this->angle = ld.angle;
+		this->area = ld.area;
+		return *this;
+	}
+
+	/*
+	*	@Brief: return the light as a cv::RotatedRect object
+	*/
+	cv::RotatedRect rec() const
+	{
+		return cv::RotatedRect(center, cv::Size2f(width, length), angle);
+	}
+
+public:
+	float width;
+	float length;
+	cv::Point2f center;
+	float angle;
+	float area;
 };
 struct ArmorParam
 {
@@ -82,9 +121,9 @@ struct ArmorParam
 	ArmorParam()
 	{
 		//pre-treatment
-		brightness_threshold = 110;
+		brightness_threshold = 101;
 		color_threshold = 40;
-		light_color_detect_extend_ratio = 1.1; //光色检测扩展比
+		light_color_detect_extend_ratio = 1.2; //光色检测扩展比
 
 
 		// Filter lights
@@ -114,150 +153,6 @@ struct ArmorParam
 		enemy_color = BLUE;	//敌人颜色
 	}
 };
-
-class ArmorFun {
-public:
-	cv::RotatedRect& adjustRec(cv::RotatedRect& rec, const int mode)
-	{
-		using std::swap;
-
-		float& width = rec.size.width;
-		float& height = rec.size.height;
-		// OpenCV中，坐标的原点在左上角，与x轴平行的方向为角度为0，逆时针旋转角度为负，顺时针旋转角度为正
-		float& angle = rec.angle;
-
-
-
-		if (mode == WIDTH_GREATER_THAN_HEIGHT)
-		{
-			if (width < height)
-			{
-				swap(width, height);
-				angle += 90.0;
-			}
-		}
-		// 使角度始终保持在[-90,90]度
-		while (angle >= 90.0) angle -= 180.0;
-		while (angle < -90.0) angle += 180.0;
-
-		if (mode == ANGLE_TO_UP)
-		{
-			if (angle >= 45.0)
-			{
-				swap(width, height);
-				angle -= 90.0;
-			}
-			else if (angle < -45.0)
-			{
-				swap(width, height);
-				angle += 90.0;
-			}
-		}
-
-		return rec;
-	}
-
-	bool isArmorPattern(ArmorDescriptor i) const {
-		vector<pair<int, double>> score;
-		map<int, double> mp;
-		Mat regulatedImg = i.frontImg;
-
-		for (int i = 0; i < 8; i++) {
-			//载入模板，模板是在初始化的时候载入ArmorDetector类，
-			//因为ArmorDescriptor与其非同类需要间接导入
-			Mat tepl = small[i];
-			Mat tepl1 = big[i];
-			//模板匹配得到位置，这里没用
-			cv::Point matchLoc;
-			//模板匹配得分
-			double value;
-			//匹配小装甲
-			value = TemplateMatch(regulatedImg, tepl, matchLoc, TM_CCOEFF_NORMED);
-			mp[i + 1] = value;
-			score.push_back(make_pair(i + 1, value));
-			//匹配大装甲
-			value = TemplateMatch(regulatedImg, tepl1, matchLoc, TM_CCOEFF_NORMED);
-			mp[i + 11] = value;
-			score.push_back(make_pair(i + 11, value));
-		}
-		//对该装甲与所有模板匹配后的得分进行排序
-		sort(score.begin(), score.end(), [](const pair<int, double>& a, const pair<int, double>& b)
-			{
-				return a.second > b.second;
-			});
-		//装甲中心位置
-		cv::Point2f c = (i.vertex[0] + i.vertex[1] + i.vertex[2] + i.vertex[3]) / 4;
-		//装甲数字即为得分最高的那个
-		int resultNum = score[0].first;
-		//得分太低认为没识别到数字
-		if (score[0].second < 0.6)
-		{
-			if (//与上次识别到的装甲板位置差不多，且丢失次数不超过一定值
-				std::abs(std::abs(lastEnemy.center.x) - std::abs(c.x)) < 10 &&
-				std::abs(std::abs(lastEnemy.center.y) - std::abs(c.y)) < 10 &&
-				lastEnemy.lostTimes < 100
-				)
-			{//认为该装甲的数字与上次相同
-				lastEnemy.lostTimes++;
-				lastEnemy.center = c;
-				enemy_num = lastEnemy.num;
-				return true;
-			}
-			else
-			{//认为不是装甲
-				return false;
-			}
-		}
-		//当装甲板识别为小装甲，而得到的号码为11、22……时，说明把大装甲识别为了小装甲。
-		if (type == SMALL_ARMOR)
-		{
-			if (resultNum > 10)
-			{
-				type = BIG_ARMOR;
-			}
-		}
-		
-	}
-};
-
-class LightDescriptor
-{
-public:
-	LightDescriptor() {};
-	LightDescriptor(const cv::RotatedRect& light)
-	{
-		width = light.size.width;
-		length = light.size.height;
-		center = light.center;
-		angle = light.angle;
-		area = light.size.area();
-	}
-	const LightDescriptor& operator =(const LightDescriptor& ld)
-	{
-		this->width = ld.width;
-		this->length = ld.length;
-		this->center = ld.center;
-		this->angle = ld.angle;
-		this->area = ld.area;
-		return *this;
-	}
-
-	/*
-	*	@Brief: return the light as a cv::RotatedRect object
-	*/
-	cv::RotatedRect rec() const
-	{
-		return cv::RotatedRect(center, cv::Size2f(width, length), angle);
-	}
-
-public:
-	float width;
-	float length;
-	cv::Point2f center;
-	float angle;
-	float area;
-};
-
 class ArmorDescriptor
 {
 public:
@@ -383,7 +278,9 @@ public:
 		warpPerspective(grayImg, frontImg, perspMat, Size(width, height));
 	}
 
-
+	bool isArmorPattern() {
+		return true;
+	}
 public:
 	std::array<cv::RotatedRect, 2> lightPairs; //0 left, 1 right
 	float sizeScore;		//S1 = e^(size)
@@ -402,6 +299,72 @@ public:
 
 
 };
+
+class ArmorFun {
+public:
+	cv::RotatedRect& adjustRec(cv::RotatedRect& rec, const int mode)
+	{
+		using std::swap;
+
+		float& width = rec.size.width;
+		float& height = rec.size.height;
+		// OpenCV中，坐标的原点在左上角，与x轴平行的方向为角度为0，逆时针旋转角度为负，顺时针旋转角度为正
+		float& angle = rec.angle;
+
+
+
+		if (mode == WIDTH_GREATER_THAN_HEIGHT)
+		{
+			if (width < height)
+			{
+				swap(width, height);
+				angle += 90.0;
+			}
+		}
+		// 使角度始终保持在[-90,90]度
+		while (angle >= 90.0) angle -= 180.0;
+		while (angle < -90.0) angle += 180.0;
+
+		if (mode == ANGLE_TO_UP)
+		{
+			if (angle >= 45.0)
+			{
+				swap(width, height);
+				angle -= 90.0;
+			}
+			else if (angle < -45.0)
+			{
+				swap(width, height);
+				angle += 90.0;
+			}
+		}
+
+		return rec;
+	}
+	void drawRect(Mat img,ArmorDescriptor a1) {
+		vector<Point2f>rectPoint;
+		Point2f oneRectPoint[4];
+		a1.lightPairs[0].points(oneRectPoint);
+		for (int i = 0; i < 4; i++) {
+			rectPoint.push_back(oneRectPoint[i]);
+		}
+		a1.lightPairs[1].points(oneRectPoint);
+		for (int i = 0; i < 4; i++) {
+			rectPoint.push_back(oneRectPoint[i]);
+		}
+		RotatedRect ret = minAreaRect((Mat)rectPoint);
+		
+		ret.points(oneRectPoint);
+		for (int i = 0; i < 4; i++)
+		{
+			cv::line(img, oneRectPoint[i], oneRectPoint[(i + 1) % 4], cv::Scalar(255, 100, 200), 2, LINE_AA);
+		}
+	}
+
+};
+
+
+
 
 template<typename T>
 float distance(const cv::Point_<T>& pt1, const cv::Point_<T>& pt2)
