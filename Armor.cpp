@@ -16,10 +16,10 @@ int main() {
 	int _flag;
 	while (1) {
 
-		Mat img;
-		capture >> img;
+		Mat img,img1;
+		capture >> img1;
 		vector<Mat>channels;
-
+		resize(img1, img, Size(640, 360));
 		split(img, channels);//分离色彩通道
 		//预处理删除己方装甲板颜色
 		Mat _grayImg = channels.at(0) - channels.at(2);//Get blue-red image;
@@ -29,9 +29,16 @@ int main() {
 		threshold(_grayImg, binBrightImg, _param.brightness_threshold, 255, cv::THRESH_BINARY);
 		Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
 		//中值滤波
-		// medianBlur(binBrightImg, binBrightImg, 3);
+		//medianBlur(binBrightImg, binBrightImg, 3);
+		//高斯滤波
+		//GaussianBlur(binBrightImg, binBrightImg, Size(3, 3), 0);
+		//腐蚀
+		//erode(binBrightImg, binBrightImg, element);
 		//膨胀
 		//试一下 先闭运算后开
+		dilate(binBrightImg, binBrightImg, element);
+		//erode(binBrightImg, binBrightImg, element);
+		dilate(binBrightImg, binBrightImg, element);
 		//dilate(binBrightImg, binBrightImg, element);
 
 		//找轮廓
@@ -160,8 +167,8 @@ int main() {
 		_armors.clear();
 		lightInfos.clear();
 
-		imshow("1222", binBrightImg);
-		imshow("0000", img);
+	//	imshow("1222", binBrightImg);
+	    imshow("0000", img);
 		waitKey(1);
 
 	}

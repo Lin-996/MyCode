@@ -357,7 +357,7 @@ public:
 		ret.points(oneRectPoint);
 		for (int i = 0; i < 4; i++)
 		{
-			cv::line(img, oneRectPoint[i], oneRectPoint[(i + 1) % 4], cv::Scalar(255, 100, 200), 2, LINE_AA);
+			cv::line(img, oneRectPoint[i], oneRectPoint[(i + 1) % 4], cv::Scalar(0, 255, 0), 2, LINE_AA);
 		}
 	}
 
