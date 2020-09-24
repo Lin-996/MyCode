@@ -28,8 +28,11 @@ int main() {
 		//阈值化
 		threshold(_grayImg, binBrightImg, _param.brightness_threshold, 255, cv::THRESH_BINARY);
 		Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
+		//中值滤波
+		// medianBlur(binBrightImg, binBrightImg, 3);
 		//膨胀
-		dilate(binBrightImg, binBrightImg, element);
+		//试一下 先闭运算后开
+		//dilate(binBrightImg, binBrightImg, element);
 
 		//找轮廓
 		vector<vector<Point>> lightContours;
@@ -157,6 +160,7 @@ int main() {
 		_armors.clear();
 		lightInfos.clear();
 
+		imshow("1222", binBrightImg);
 		imshow("0000", img);
 		waitKey(1);
 

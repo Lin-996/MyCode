@@ -121,7 +121,7 @@ struct ArmorParam
 	ArmorParam()
 	{
 		//pre-treatment
-		brightness_threshold = 101;
+		brightness_threshold = 110;
 		color_threshold = 40;
 		light_color_detect_extend_ratio = 1.2; //光色检测扩展比
 
